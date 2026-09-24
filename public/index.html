@@ -4,51 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Note to Post</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root { color-scheme: light dark; --bg: #f6f5f2; --text: #1d1c1a; --muted: #6b6860; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #121311; --text: #e9e8e4; --muted: #9c9a92; } }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+    main { max-width: 520px; margin: 20vh auto 0; padding: 0 16px; }
+    p { color: var(--muted); }
+  </style>
 </head>
 <body>
-  <form id="login" class="login" hidden>
+  <main>
     <h1>Note to Post</h1>
-    <label for="password">Password</label>
-    <input id="password" type="password" autocomplete="current-password" required>
-    <button type="submit">Open</button>
-  </form>
-
-  <div class="page" id="app">
-    <header>
-      <div>
-        <h1>Note to Post</h1>
-        <p class="subtitle">Your Telegram notes, filtered and drafted. Nothing is posted until you post it.</p>
-      </div>
-      <div class="cadence" id="cadence"></div>
-    </header>
-
-    <div id="setup" class="setup" hidden></div>
-
-    <nav class="tabs" role="tablist">
-      <button class="tab active" data-tab="review">To review <span class="count" id="count-review"></span></button>
-      <button class="tab" data-tab="notes">Notes <span class="count" id="count-notes"></span></button>
-      <button class="tab" data-tab="done">Done</button>
-    </nav>
-
-    <section id="tab-review" class="panel"></section>
-
-    <section id="tab-notes" class="panel" hidden>
-      <form id="add-note" class="add-note">
-        <textarea id="note-text" rows="2" placeholder="Paste a note that didn't come through Telegram..."></textarea>
-        <button type="submit">Add note</button>
-      </form>
-      <div class="row-actions">
-        <button id="run-triage" class="secondary">Sort new notes now</button>
-        <button id="run-tick" class="secondary">Run today's scheduled draft now</button>
-      </div>
-      <div id="notes-list"></div>
-    </section>
-
-    <section id="tab-done" class="panel" hidden></section>
-  </div>
-
-  <div id="toast" class="toast" hidden></div>
-  <script src="app.js"></script>
+    <p>This runs inside Telegram. Send notes to the bot and the ones worth a post come back as LinkedIn drafts. Nothing is posted anywhere automatically.</p>
+  </main>
 </body>
 </html>
