@@ -1,55 +1,48 @@
 # Note to Post
 
-Meera keeps dropping notes into Telegram. This app picks them up, decides which are worth a post, drafts a LinkedIn post in her voice with a current news angle, and holds it for her review. It aims for three drafts a week.
+Meera keeps dropping notes into Telegram. This bot reads each one, decides whether it's worth a post, and if it is, drafts a LinkedIn post in her voice with a current news angle and sends it back to her in the same chat.
 
-**It never posts anything.** Both no-code proposals Meera turned down did the whole job end to end. This one does every step except the last. A draft reaches LinkedIn only when she copies it there herself.
+**It never posts anything.** Both no-code proposals Meera turned down did the whole job end to end. This one stops at the draft: she copies it to LinkedIn herself.
 
-## Flow
+## In the chat
 
-```
-Telegram note (text or voice)
-  -> ingest          voice notes transcribed by Gemini
-  -> triage          develop / hold / skip + reason, judged against voice=skill.txt
-                     (Meera can override any verdict)
-  -> draft           Mon/Wed/Fri 08:00, best "develop" note, until 3 this week
-                       - Google Search grounding finds one recent news item / data point
-                       - post written to the voice guide, Skinstinct numbers left as [placeholders]
-                       - voice lint (dashes, semicolons, !, hashtags, emojis, banned words,
-                         CTAs, US spelling, broetry); one auto-fix pass on hard failures
-  -> Telegram ping   "Draft 2/3 this week is ready" + link
-  -> review page     edit (lint re-runs), redraft with feedback, reject, or copy & mark posted
-```
-
-If no note is strong enough on a draft day, it says so instead of forcing a weak post.
-
-## Deployed on Vercel
-
-| Piece | How it runs |
+| She does | The bot does |
 |---|---|
-| Review page | `public/`, served as static files. `/api/*` goes to `api/index.js` (the Express app in `server.js`) |
-| Telegram | webhook at `/api/telegram`, checked against `TELEGRAM_WEBHOOK_SECRET` |
-| Schedule | Vercel Cron hits `/api/cron` daily at 02:30 UTC (08:00 IST) and drafts on `DRAFT_DAYS` |
-| Storage | Upstash Redis (Vercel Marketplace), one JSON document |
-| Access | `APP_PASSWORD`, remembered in a cookie for 90 days |
+| Sends a note (text or voice) | Transcribes voice, sorts it against the voice guide. Worth a post: says why, drafts it (about 2 min). Not worth one: says why in one line. |
+| Replies **draft** to a note, or to a "Not drafting" message | Drafts it anyway |
+| Replies to a draft with feedback, or with the real numbers for the `[brackets]` | Sends a new version |
 
-Env vars to set in the Vercel project: `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `APP_PASSWORD`, `TELEGRAM_WEBHOOK_SECRET`, `CRON_SECRET`, `PUBLIC_URL`. Connecting Upstash adds the `KV_REST_API_*` ones.
+Each draft arrives as two messages. The **post alone**, so it copies cleanly, then **About this draft**: the news source, what to fill in, any made-up details the checker took out, voice-check results and the drafter's notes.
 
-After the first deploy, point the bot at it:
+## How a draft is made
+
+1. **Triage** (Gemini, JSON): develop / hold / skip, scored 1-10. Only `develop` at `MIN_SCORE` (default 7) or higher is drafted. With no weekly queue, this filter is what keeps it near 3 posts a week.
+2. **Draft** (Gemini + Google Search grounding): one recent news item or data point, the post, notes for Meera. Sources come from grounding metadata, not the model's text. No source means one retry that insists on searching. A cut-off draft is retried with a bigger budget, never sent.
+3. **Invented-detail check**: anything about Skinstinct, Meera or the customer that her note doesn't state becomes a `[placeholder]`.
+4. **Voice lint** (`lib/voice-lint.js`): dashes, semicolons, `!`, hashtags, emojis, banned words, CTAs, US spelling, broetry, spelled-out numbers, cut-off endings. Hard failures get one automatic fix pass.
+
+Nothing is stored. A redraft works because her reply carries the draft it's replying to.
+
+## Deploy (Vercel)
+
+Env vars: `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, optional `GEMINI_MODEL`, `MIN_SCORE`.
+
+After deploying, point the bot at it:
 
 ```bash
 node scripts/set-webhook.js https://<your-app>.vercel.app
 ```
 
-## Running locally
+`GET /api/health` shows which settings the deployed app can see.
 
-`cp .env.example .env`, fill in `GEMINI_API_KEY` and `TELEGRAM_BOT_TOKEN`, then `npm install && npm start` and open http://localhost:3300. Locally it stores data in `data/store.json` and long-polls Telegram. If the bot already has a webhook (i.e. the deployed app owns it), local polling steps aside rather than stealing messages from production.
+## Local
+
+`cp .env.example .env`, fill it in, `npm install && npm start`. Locally it long-polls Telegram instead, but refuses to while a webhook is set, so it never takes messages from the deployed bot. `npm test` runs the lint and message tests.
 
 ## Files
 
-- `lib/pipeline.js` holds the ingest, triage and draft prompts and the cadence scheduler
-- `lib/voice-lint.js` checks the voice guide's hard rules (tests in `test/`)
-- `lib/telegram.js` handles long polling, voice-file download and pings
-- `lib/gemini.js` wraps `generateContent`; cited sources come from grounding metadata, not from the model's text
-- `lib/store.js` stores notes and drafts in Upstash Redis when deployed, `data/store.json` locally
-
-The drafter follows `voice-guide.txt`. Edit it and redeploy to change the voice rules.
+- `lib/bot.js` routes chat messages and formats replies
+- `lib/pipeline.js` has the transcribe, triage, draft, invented-detail and revise prompts
+- `lib/voice-lint.js` checks the voice guide's hard rules
+- `lib/telegram.js` and `lib/gemini.js` are thin API wrappers
+- `voice-guide.txt` is Meera's voice guide. Edit it and redeploy to change the rules.
