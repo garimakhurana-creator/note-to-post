@@ -1,0 +1,14 @@
+{
+  "name": "note-to-post",
+  "version": "1.0.0",
+  "description": "Picks up Meera's Telegram notes, triages them, drafts LinkedIn posts with a current news angle, and queues them for her review",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@vercel/functions": "^3.9.9",
+    "express": "^4.19.2"
+  }
+}
