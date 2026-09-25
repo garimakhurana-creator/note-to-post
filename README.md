@@ -16,18 +16,20 @@ Each draft arrives as two messages. The **post alone**, so it copies cleanly, th
 
 ## How a draft is made
 
-1. **Triage** (Gemini, JSON): develop / hold / skip, scored 1-10. Only `develop` at `MIN_SCORE` (default 7) or higher is drafted. With no weekly queue, this filter is what keeps it near 3 posts a week.
-2. **Draft** (Gemini + Google Search grounding): one recent news item or data point, the post, notes for Meera. Sources come from grounding metadata, not the model's text. No source means one retry that insists on searching. A cut-off draft is retried with a bigger budget, never sent.
-3. **Invented-detail check**: anything about Skinstinct, Meera or the customer that her note doesn't state becomes a `[placeholder]`.
-4. **Voice lint** (`lib/voice-lint.js`): dashes, semicolons, `!`, hashtags, emojis, banned words, CTAs, US spelling, broetry, spelled-out numbers, cut-off endings. Hard failures get one automatic fix pass.
+1. **Score** (Gemini Flash): 0-10 with a one-line reason. Below `MIN_SCORE` (default 6), she gets the reason and no draft. With no weekly queue, this filter is what keeps it near 3 posts a week.
+2. **News angle**: Gemini Flash pulls 3-5 search terms from the note. Google News RSS (free, no key) returns recent results, widening the search until something comes back.
+3. **Draft** (Gemini Pro, with `voice-guide.txt`): the drafter gets the note plus the top news results. It uses one only if it fits naturally, and says which.
+4. **Verify flag**: any draft that uses a news item ends with the `NEWS SOURCE / FROM / LINK / ⚠ Check this before publishing` block. She checks the claim, then deletes the block before posting.
+5. **Invented-detail check**: anything about Skinstinct, Meera or the customer that her note doesn't state becomes a `[placeholder]`.
+6. **Voice lint** (`lib/voice-lint.js`): dashes, semicolons, `!`, hashtags, emojis, banned words, CTAs, US spelling, broetry, spelled-out numbers, cut-off endings. Hard failures get one automatic fix pass. The verify block isn't linted.
 
-Nothing is stored. A redraft works because her reply carries the draft it's replying to.
+Nothing is stored. A redraft works because her reply carries the draft it's replying to, verify block included, so it keeps the same news item.
 
 ## Deploy (Vercel)
 
-Env vars: `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, optional `GEMINI_MODEL`, `MIN_SCORE`.
+Env vars: `GEMINI_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `TELEGRAM_WEBHOOK_SECRET`, optional `GEMINI_MODEL` (drafting), `GEMINI_FAST_MODEL` (scoring and keywords), `MIN_SCORE`.
 
-After deploying, point the bot at it:
+After deploying, point the bot at `/api/webhook`:
 
 ```bash
 node scripts/set-webhook.js https://<your-app>.vercel.app
@@ -44,5 +46,6 @@ node scripts/set-webhook.js https://<your-app>.vercel.app
 - `lib/bot.js` routes chat messages and formats replies
 - `lib/pipeline.js` has the transcribe, triage, draft, invented-detail and revise prompts
 - `lib/voice-lint.js` checks the voice guide's hard rules
+- `lib/news.js` searches Google News RSS
 - `lib/telegram.js` and `lib/gemini.js` are thin API wrappers
 - `voice-guide.txt` is Meera's voice guide. Edit it and redeploy to change the rules.
