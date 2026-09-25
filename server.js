@@ -9,7 +9,7 @@ const bot = require('./lib/bot');
 const telegram = require('./lib/telegram');
 
 // Runs two ways:
-//  - on Vercel (api/index.js): Telegram posts each message to /api/telegram
+//  - on Vercel (api/index.js): Telegram posts each message to /api/webhook
 //  - locally (`npm start`): long-polls Telegram, same handler
 const ON_VERCEL = Boolean(process.env.VERCEL);
 
@@ -46,7 +46,9 @@ const safeEqual = (a, b) => {
 // Telegram posts every message here. Reply 200 at once - drafting takes a
 // couple of minutes and Telegram would otherwise retry and double-post - and
 // keep working in the background.
-app.post('/api/telegram', (req, res) => {
+// /api/webhook is the address in the case plan; /api/telegram is kept so an
+// existing webhook keeps working.
+app.post(['/api/webhook', '/api/telegram'], (req, res) => {
   if (!safeEqual(req.get('x-telegram-bot-api-secret-token'), process.env.TELEGRAM_WEBHOOK_SECRET)) {
     return res.status(401).end();
   }

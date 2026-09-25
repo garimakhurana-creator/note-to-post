@@ -14,15 +14,22 @@ test('drafts are unlabelled, every other bot message is labelled', () => {
   }
 });
 
-test('about message lists sources, placeholders and removed inventions', () => {
+test('about message explains the news angle, placeholders and removed inventions', () => {
+  const news = { headline: 'CDSCO tightens labels', source: 'The Hindu', date: '2026-09-20', link: 'https://x.y/z' };
   const text = aboutMessage({
-    post: 'For [product], the PAO is [months].', angle: 'CDSCO notice, Sept 2026.',
-    sources: [{ title: 'cdsco.gov.in', url: 'https://example.org' }], forMeera: '- check the date',
-    lint: [{ severity: 'fill', rule: 'x', detail: 'y' }], inventions: [{ removed: 'on Tuesday', placeholder: '(deleted)' }]
+    body: 'For [product], the PAO is [months].', news, newsPhrase: 'cosmetic labelling India', newsCandidates: [news],
+    forMeera: '- check the date', lint: [{ severity: 'fill', rule: 'x', detail: 'y' }],
+    inventions: [{ removed: 'on Tuesday', placeholder: '(deleted)' }]
   });
   assert.ok(text.startsWith('About this draft'));
-  assert.ok(text.includes('Source: cdsco.gov.in - https://example.org'));
+  assert.ok(text.includes('"CDSCO tightens labels" (The Hindu, 2026-09-20)'));
+  assert.ok(text.includes('delete the NEWS SOURCE block'));
   assert.ok(text.includes('[product], [months]'));
   assert.ok(text.includes('"on Tuesday" -> (deleted)'));
   assert.ok(text.includes('Voice check: passes.'));
+});
+
+test('about message says when no news fitted', () => {
+  const text = aboutMessage({ body: 'x.', news: null, newsPhrase: 'pH serum', newsCandidates: [{ headline: 'Best serums 2026', source: 'Vogue' }], forMeera: '', lint: [], inventions: [] });
+  assert.ok(text.includes('nothing fitted naturally'));
 });
